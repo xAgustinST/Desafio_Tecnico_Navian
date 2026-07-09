@@ -35,6 +35,9 @@ ExportedObj/
 # Unity3D crashes / OS
 sysinfo.txt
 *.stackdump
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+build_log.txt
 .DS_Store
 .DS_Store?
 ._*

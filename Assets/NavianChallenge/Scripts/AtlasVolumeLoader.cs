@@ -27,6 +27,12 @@ namespace NavianChallenge
 
         [System.NonSerialized] VolumeRenderedObject volume;
 
+        /// <summary>The created volume, or null if it hasn't loaded yet.</summary>
+        public VolumeRenderedObject Volume => Existing();
+
+        /// <summary>Fired once the volume has been created and attached (Play mode only).</summary>
+        public event System.Action<VolumeRenderedObject> VolumeReady;
+
         Transform Root => atlasRoot != null ? atlasRoot : transform.parent;
 
         void OnEnable()
@@ -81,14 +87,38 @@ namespace NavianChallenge
                 vol.gameObject.hideFlags = HideFlags.DontSave;
 
             volume = vol;
+
+            if (Application.isPlaying)
+                VolumeReady?.Invoke(vol);
         }
 
         void DestroyVolume()
         {
             VolumeRenderedObject v = Existing();
             if (v == null) return;
-            if (Application.isPlaying) Destroy(v.gameObject);
-            else DestroyImmediate(v.gameObject);
+
+            if (Application.isPlaying)
+            {
+                Destroy(v.gameObject);
+                volume = null;
+                return;
+            }
+
+#if UNITY_EDITOR
+            if (UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                // Mid edit<->play transition: Unity forbids DestroyImmediate here
+                // ("Cannot destroy GameObject while its parent is being activated or
+                // deactivated"). Don't touch it — Unity's own scene reload (part of
+                // entering Play mode) discards this DontSave preview object on its own;
+                // trying to force it here caused stranger bugs than the harmless one-frame
+                // leftover ever did (a scheduled EditorApplication.delayCall fired at an
+                // unpredictable point relative to Play-mode startup and ended up destroying
+                // unrelated runtime-created objects).
+                return;
+            }
+#endif
+            DestroyImmediate(v.gameObject);
             volume = null;
         }
 

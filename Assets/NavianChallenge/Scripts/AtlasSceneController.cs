@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace NavianChallenge
 {
@@ -47,24 +48,40 @@ namespace NavianChallenge
             HandleOrbit();
 
             if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
-            if (Input.GetKeyDown(KeyCode.R) && cam != null)
-            {
-                cam.transform.position = camStartPos;
-                cam.transform.rotation = camStartRot;
-            }
+            if (Input.GetKeyDown(KeyCode.R)) ResetCamera();
+        }
+
+        /// <summary>Restores the camera to its starting position/rotation (bound to R, also used by the "Reset View" preset).</summary>
+        public void ResetCamera()
+        {
+            if (cam == null) return;
+            cam.transform.position = camStartPos;
+            cam.transform.rotation = camStartRot;
+        }
+
+        /// <summary>Lets other UI (e.g. the challenge panel header) suppress this on-screen OnGUI box so the two don't overlap.</summary>
+        public void SetHelpVisible(bool visible)
+        {
+            showHelp = visible;
         }
 
         void HandleOrbit()
         {
             if (cam == null) return;
 
-            if (Input.GetMouseButton(0) || Input.GetMouseButton(1))
+            // Don't let orbit/zoom fire while the pointer is over the UI panel (e.g.
+            // scrolling the panel's ScrollRect shouldn't also zoom the 3D camera).
+            bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+
+            if (!pointerOverUI && (Input.GetMouseButton(0) || Input.GetMouseButton(1)))
             {
                 float mx = Input.GetAxis("Mouse X") * orbitSpeed;
                 float my = Input.GetAxis("Mouse Y") * orbitSpeed;
                 cam.transform.RotateAround(pivot, Vector3.up, mx);
                 cam.transform.RotateAround(pivot, cam.transform.right, -my);
             }
+
+            if (pointerOverUI) return;
 
             float scroll = Input.GetAxis("Mouse ScrollWheel");
             if (Mathf.Abs(scroll) > 0.0001f)
